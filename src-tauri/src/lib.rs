@@ -2315,14 +2315,29 @@ async fn execute_sync(
                         }
                     }
 
-                    let output = shell
-                        .command(&adb_cmd)
-                        .args(["-s", &device_id, "push", local_file.to_str().unwrap_or(""), &device_file])
-                        .output()
-                        .await;
+                    const MAX_PUSH_ATTEMPTS: u32 = 3;
+                    let mut push_result = Err("Push not attempted".to_string());
+                    for attempt in 1..=MAX_PUSH_ATTEMPTS {
+                        let output = shell
+                            .command(&adb_cmd)
+                            .args(["-s", &device_id, "push", local_file.to_str().unwrap_or(""), &device_file])
+                            .output()
+                            .await;
 
-                    match output {
-                        Ok(o) if o.status.success() => {
+                        push_result = match output {
+                            Ok(o) if o.status.success() => Ok(()),
+                            Ok(o) => Err(format!("Push failed: {}", String::from_utf8_lossy(&o.stderr))),
+                            Err(e) => Err(format!("Push error: {}", e)),
+                        };
+
+                        if push_result.is_ok() || attempt == MAX_PUSH_ATTEMPTS {
+                            break;
+                        }
+                        tokio::time::sleep(std::time::Duration::from_millis(500 * attempt as u64)).await;
+                    }
+
+                    match push_result {
+                        Ok(()) => {
                             // Restore the source file's modification time on the device
                             if let Some(&mtime) = local_mtime_map.get(&action.file_path) {
                                 let escaped_path = device_file.replace("'", "'\\''");
@@ -2335,8 +2350,7 @@ async fn execute_sync(
                             }
                             Ok(())
                         }
-                        Ok(o) => Err(format!("Push failed: {}", String::from_utf8_lossy(&o.stderr))),
-                        Err(e) => Err(format!("Push error: {}", e)),
+                        Err(e) => Err(e),
                     }
                 } else {
                     Ok(()) // skip
