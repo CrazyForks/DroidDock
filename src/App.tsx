@@ -538,8 +538,8 @@ function App() {
   });
 
   // Sort state
-  const [sortColumn, setSortColumn] = useState<'name' | 'size' | 'date'>('name');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortColumn, setSortColumn] = useState<'name' | 'size' | 'date'>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // View mode state
   const [viewMode, setViewMode] = useState<'table' | 'grid' | 'column'>(() => {
@@ -848,8 +848,10 @@ function App() {
       const isTyping = document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA';
 
       // Block all shortcuts except Escape when a modal is open
+      // Exception: allow arrow keys through when preview is open (for preview navigation)
       const isModalOpen = showDeleteConfirm || showPreview || showShortcutsHelp || settingsOpen || syncDialogOpen || renamingIndex >= 0;
-      if (isModalOpen && e.key !== 'Escape') {
+      const isPreviewNavKey = showPreview && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key);
+      if (isModalOpen && e.key !== 'Escape' && !isPreviewNavKey) {
         return;
       }
 
