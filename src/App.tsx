@@ -851,6 +851,14 @@ function App() {
       // Exception: allow arrow keys through when preview is open (for preview navigation)
       const isModalOpen = showDeleteConfirm || showPreview || showShortcutsHelp || settingsOpen || syncDialogOpen || renamingIndex >= 0;
       const isPreviewNavKey = showPreview && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key);
+      // Enter in the delete-confirm dialog confirms the delete.
+      if (showDeleteConfirm && e.key === 'Enter') {
+        e.preventDefault();
+        if (!deleting) {
+          performDelete();
+        }
+        return;
+      }
       if (isModalOpen && e.key !== 'Escape' && !isPreviewNavKey) {
         return;
       }
@@ -1120,24 +1128,22 @@ function App() {
             if (viewMode === 'table') {
               // Table view: only up/down arrows
               if (e.key === 'ArrowUp') {
-                newIndex = focusedIndex <= 0 ? displayFiles.length - 1 : focusedIndex - 1;
+                newIndex = Math.max(0, focusedIndex - 1);
               } else if (e.key === 'ArrowDown') {
-                newIndex = focusedIndex >= displayFiles.length - 1 ? 0 : focusedIndex + 1;
+                newIndex = Math.min(displayFiles.length - 1, focusedIndex + 1);
               }
             } else {
               // Grid view: all four arrows
               const cols = calculateGridColumns();
 
               if (e.key === 'ArrowUp') {
-                newIndex = focusedIndex - cols;
-                if (newIndex < 0) newIndex = displayFiles.length - 1;
+                newIndex = Math.max(0, focusedIndex - cols);
               } else if (e.key === 'ArrowDown') {
-                newIndex = focusedIndex + cols;
-                if (newIndex >= displayFiles.length) newIndex = 0;
+                newIndex = Math.min(displayFiles.length - 1, focusedIndex + cols);
               } else if (e.key === 'ArrowLeft') {
-                newIndex = focusedIndex <= 0 ? displayFiles.length - 1 : focusedIndex - 1;
+                newIndex = Math.max(0, focusedIndex - 1);
               } else if (e.key === 'ArrowRight') {
-                newIndex = focusedIndex >= displayFiles.length - 1 ? 0 : focusedIndex + 1;
+                newIndex = Math.min(displayFiles.length - 1, focusedIndex + 1);
               }
             }
 
@@ -1174,9 +1180,9 @@ function App() {
           if (viewMode === 'table') {
             // Table view: only up/down arrows
             if (e.key === 'ArrowUp') {
-              newIndex = focusedIndex <= 0 ? displayFiles.length - 1 : focusedIndex - 1;
+              newIndex = Math.max(0, focusedIndex - 1);
             } else if (e.key === 'ArrowDown') {
-              newIndex = focusedIndex >= displayFiles.length - 1 ? 0 : focusedIndex + 1;
+              newIndex = Math.min(displayFiles.length - 1, focusedIndex + 1);
             }
           } else {
             // Grid view: all four arrows
@@ -1198,15 +1204,13 @@ function App() {
             }
 
             if (e.key === 'ArrowUp') {
-              newIndex = focusedIndex - cols;
-              if (newIndex < 0) newIndex = displayFiles.length - 1;
+              newIndex = Math.max(0, focusedIndex - cols);
             } else if (e.key === 'ArrowDown') {
-              newIndex = focusedIndex + cols;
-              if (newIndex >= displayFiles.length) newIndex = 0;
+              newIndex = Math.min(displayFiles.length - 1, focusedIndex + cols);
             } else if (e.key === 'ArrowLeft') {
-              newIndex = focusedIndex <= 0 ? displayFiles.length - 1 : focusedIndex - 1;
+              newIndex = Math.max(0, focusedIndex - 1);
             } else if (e.key === 'ArrowRight') {
-              newIndex = focusedIndex >= displayFiles.length - 1 ? 0 : focusedIndex + 1;
+              newIndex = Math.min(displayFiles.length - 1, focusedIndex + 1);
             }
           }
 
@@ -1277,7 +1281,7 @@ function App() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedFiles, searchMode, focusedIndex, viewMode, iconSize, showHiddenFiles, thumbnailsEnabled, showShortcutsHelp, showDeleteConfirm, renamingIndex, loading, columnPath, columnFiles, columnSelected, activeColumnIndex, showPreview, previewLoading, settingsOpen, syncDialogOpen, syncing, syncPreviewing, uploading, selectedDevice]);
+  }, [selectedFiles, searchMode, focusedIndex, viewMode, iconSize, showHiddenFiles, thumbnailsEnabled, showShortcutsHelp, showDeleteConfirm, renamingIndex, loading, columnPath, columnFiles, columnSelected, activeColumnIndex, showPreview, previewLoading, settingsOpen, syncDialogOpen, syncing, syncPreviewing, uploading, selectedDevice, deleting]);
 
   async function checkAdb() {
     try {
@@ -2049,20 +2053,20 @@ function App() {
       const cols = calculateGridColumns();
 
       if (key === 'ArrowDown') {
-        nextIndex = (focusedIndex + cols) % displayFiles.length;
+        nextIndex = focusedIndex + cols;
       } else if (key === 'ArrowUp') {
-        nextIndex = ((focusedIndex - cols) + displayFiles.length) % displayFiles.length;
+        nextIndex = focusedIndex - cols;
       } else if (key === 'ArrowRight') {
-        nextIndex = (focusedIndex + 1) % displayFiles.length;
+        nextIndex = focusedIndex + 1;
       } else if (key === 'ArrowLeft') {
-        nextIndex = ((focusedIndex - 1) + displayFiles.length) % displayFiles.length;
+        nextIndex = focusedIndex - 1;
       }
     } else if (viewMode === 'table' || viewMode === 'column') {
       // Table and column view: simple up/down
       if (key === 'ArrowDown') {
-        nextIndex = (focusedIndex + 1) % displayFiles.length;
+        nextIndex = focusedIndex + 1;
       } else if (key === 'ArrowUp') {
-        nextIndex = ((focusedIndex - 1) + displayFiles.length) % displayFiles.length;
+        nextIndex = focusedIndex - 1;
       } else {
         // Left/Right don't apply in table/column view
         return;
@@ -2072,12 +2076,15 @@ function App() {
       return;
     }
 
-    // Skip directories - find next previewable file
-    let attempts = 0;
-    const maxAttempts = displayFiles.length;
+    // Stop at list boundaries - don't wrap around
+    if (nextIndex < 0 || nextIndex >= displayFiles.length) {
+      return;
+    }
+
+    // Skip directories - find next previewable file, stopping at the boundary
     const direction = (key === 'ArrowDown' || key === 'ArrowRight') ? 1 : -1;
 
-    while (attempts < maxAttempts) {
+    while (nextIndex >= 0 && nextIndex < displayFiles.length) {
       const file = displayFiles[nextIndex];
 
       // Found a previewable file
@@ -2086,20 +2093,12 @@ function App() {
       }
 
       // Skip this directory, try next
-      if (direction > 0) {
-        nextIndex = (nextIndex + 1) % displayFiles.length;
-      } else {
-        nextIndex = ((nextIndex - 1) + displayFiles.length) % displayFiles.length;
-      }
-      attempts++;
+      nextIndex += direction;
     }
 
-    // Check if we found a previewable file
-    if (attempts >= maxAttempts) {
-      // All files are directories, close preview
-      setShowPreview(false);
-      setPreviewData(null);
-      setError("No previewable files found");
+    // Check if we found a previewable file within bounds
+    if (nextIndex < 0 || nextIndex >= displayFiles.length) {
+      // Hit the boundary without finding a previewable file, don't move
       return;
     }
 
