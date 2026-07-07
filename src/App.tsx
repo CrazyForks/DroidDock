@@ -531,6 +531,7 @@ function App() {
   const [downloading, setDownloading] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
   const [downloadProgress, setDownloadProgress] = useState<string>("");
+  const [uploadProgress, setUploadProgress] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [skipDuplicateDownloads, setSkipDuplicateDownloads] = useState<boolean>(() => {
     const saved = localStorage.getItem('droiddock-skip-duplicate-downloads');
@@ -2435,7 +2436,8 @@ function App() {
       let successCount = 0;
       let errorCount = 0;
 
-      for (const localPath of filePaths) {
+      for (let i = 0; i < filePaths.length; i++) {
+        const localPath = filePaths[i];
         try {
           const fileName = localPath.split('/').pop() || localPath.split('\\').pop() || 'file';
 
@@ -2444,6 +2446,7 @@ function App() {
             ? `/${fileName}`
             : `${currentPath}/${fileName}`;
 
+          setUploadProgress(`Uploading ${i + 1} of ${filePaths.length}: ${fileName}`);
           console.log(`Uploading ${fileName} to ${devicePath}`);
 
           await invoke("upload_file", {
@@ -2460,6 +2463,7 @@ function App() {
         }
       }
 
+      setUploadProgress("");
       setUploading(false);
 
       // Refresh file list to show new files
@@ -2855,6 +2859,12 @@ function App() {
         <div className="info">
           {downloadProgress}
           <button className="close-btn" onClick={() => setDownloadProgress("")} title="Close">×</button>
+        </div>
+      )}
+      {uploadProgress && (
+        <div className="info">
+          {uploadProgress}
+          <button className="close-btn" onClick={() => setUploadProgress("")} title="Close">×</button>
         </div>
       )}
 
