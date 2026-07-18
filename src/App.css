@@ -883,6 +883,57 @@ tbody tr {
   font-weight: 600;
 }
 
+.download-options-dialog {
+  max-width: 420px;
+}
+
+.download-options-summary {
+  color: #666;
+  font-size: 13px;
+  margin: 4px 0 14px;
+}
+
+.conflict-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.conflict-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  align-items: baseline;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.conflict-option.active {
+  border-color: #4a90d9;
+}
+
+.conflict-option-label {
+  font-size: 14px;
+}
+
+.conflict-option-hint {
+  grid-column: 2;
+  font-size: 12px;
+  color: #888;
+}
+
+.reveal-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -2192,6 +2243,22 @@ tbody tr {
 
   .device-selector button:hover {
     background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .download-options-summary {
+    color: #aaa;
+  }
+
+  .conflict-option {
+    border-color: #444;
+  }
+
+  .conflict-option.active {
+    border-color: #4a90d9;
+  }
+
+  .conflict-option-hint {
+    color: #999;
   }
 
   .device-selector button.toggle-active {

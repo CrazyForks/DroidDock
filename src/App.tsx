@@ -553,12 +553,6 @@ function App() {
   });
   const [downloadOptionsOpen, setDownloadOptionsOpen] = useState<boolean>(false);
 
-  // Download options state handlers (used by Tasks 6-7 for conflict resolution UI)
-  useEffect(() => {
-    // Intentionally keep these in closure for Tasks 6-7 to use
-    void [setConflictMode, setRevealAfterDownload, setDownloadOptionsOpen, downloadOptionsOpen];
-  }, []);
-
   // Sort state
   const [sortColumn, setSortColumn] = useState<'name' | 'size' | 'date'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -879,7 +873,7 @@ function App() {
 
       // Block all shortcuts except Escape when a modal is open
       // Exception: allow arrow keys through when preview is open (for preview navigation)
-      const isModalOpen = showDeleteConfirm || showPreview || showShortcutsHelp || settingsOpen || syncDialogOpen || renamingIndex >= 0;
+      const isModalOpen = showDeleteConfirm || showPreview || showShortcutsHelp || settingsOpen || syncDialogOpen || downloadOptionsOpen || renamingIndex >= 0;
       const isPreviewNavKey = showPreview && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key);
       // Enter in the delete-confirm dialog confirms the delete.
       if (showDeleteConfirm && e.key === 'Enter') {
@@ -1277,7 +1271,9 @@ function App() {
       }
       // Escape: Close modals/popups first, then clear selection/focus
       else if (e.key === 'Escape') {
-        if (syncDialogOpen) {
+        if (downloadOptionsOpen) {
+          setDownloadOptionsOpen(false);
+        } else if (syncDialogOpen) {
           handleCloseSyncDialog();
         } else if (settingsOpen) {
           setSettingsOpen(false);
@@ -1303,7 +1299,7 @@ function App() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedFiles, searchMode, focusedIndex, viewMode, iconSize, showHiddenFiles, thumbnailsEnabled, showShortcutsHelp, showDeleteConfirm, renamingIndex, loading, columnPath, columnFiles, columnSelected, activeColumnIndex, showPreview, previewLoading, settingsOpen, syncDialogOpen, syncing, syncPreviewing, uploading, selectedDevice, deleting]);
+  }, [selectedFiles, searchMode, focusedIndex, viewMode, iconSize, showHiddenFiles, thumbnailsEnabled, showShortcutsHelp, showDeleteConfirm, renamingIndex, loading, columnPath, columnFiles, columnSelected, activeColumnIndex, showPreview, previewLoading, settingsOpen, syncDialogOpen, downloadOptionsOpen, syncing, syncPreviewing, uploading, selectedDevice, deleting]);
 
   async function checkAdb() {
     try {
@@ -1835,20 +1831,58 @@ function App() {
     setSelectedFiles(new Set());
   }
 
-  async function handleDownload() {
+  function handleDownload() {
     if (!selectedDevice || selectedFiles.size === 0) return;
+    setDownloadOptionsOpen(true);
+  }
 
-    const selectedFileNames = Array.from(selectedFiles);
+  function devicePathForName(name: string): string {
+    return name.startsWith("/")
+      ? name
+      : currentPath === "/"
+        ? `/${name}`
+        : `${currentPath}/${name}`;
+  }
 
-    // Filter out directories
-    const filesToDownload = selectedFileNames
-      .map(fileName => files.find(f => f.name === fileName) || searchResults.find(f => f.name === fileName))
-      .filter(file => file && !file.is_directory);
+  interface DownloadItem {
+    devicePath: string;
+    relativePath: string;
+  }
 
-    if (filesToDownload.length === 0) {
-      setError("Cannot download directories. Please select files only.");
-      return;
+  async function expandSelection(): Promise<DownloadItem[]> {
+    const entries = Array.from(selectedFiles)
+      .map(
+        (name) =>
+          files.find((f) => f.name === name) ||
+          searchResults.find((f) => f.name === name),
+      )
+      .filter((f): f is FileEntry => !!f);
+
+    const items: DownloadItem[] = [];
+    for (const entry of entries) {
+      const devicePath = devicePathForName(entry.name);
+      const baseName = devicePath.split("/").pop() || entry.name;
+      if (!entry.is_directory) {
+        items.push({ devicePath, relativePath: baseName });
+      } else {
+        const paths = await invoke<string[]>("list_files_recursive", {
+          deviceId: selectedDevice,
+          devicePath,
+        });
+        const prefix = devicePath.endsWith("/") ? devicePath : `${devicePath}/`;
+        for (const p of paths) {
+          items.push({
+            devicePath: p,
+            relativePath: `${baseName}/${p.slice(prefix.length)}`,
+          });
+        }
+      }
     }
+    return items;
+  }
+
+  async function performDownload() {
+    if (!selectedDevice || selectedFiles.size === 0) return;
 
     try {
       // Show directory picker dialog
@@ -1863,54 +1897,68 @@ function App() {
         return;
       }
 
-      const downloadDir = typeof selectedDir === 'string' ? selectedDir : selectedDir[0];
+      const downloadDir =
+        typeof selectedDir === "string" ? selectedDir : selectedDir[0];
 
       setDownloading(true);
       setError("");
       setSuccessMessage("");
+      setDownloadProgress("Preparing download…");
 
-      let successCount = 0;
+      let items: DownloadItem[];
+      try {
+        items = await expandSelection();
+      } catch (err) {
+        setDownloading(false);
+        setDownloadProgress("");
+        setError(`Failed to list folder contents: ${err}`);
+        return;
+      }
+
+      if (items.length === 0) {
+        setDownloading(false);
+        setDownloadProgress("");
+        setSelectedFiles(new Set());
+        setSuccessMessage("Nothing to download");
+        return;
+      }
+
+      let downloadedCount = 0;
       let skippedCount = 0;
+      let renamedCount = 0;
       let errorCount = 0;
-      const totalFiles = filesToDownload.length;
 
-      // Download each file
-      for (let i = 0; i < filesToDownload.length; i++) {
-        const file = filesToDownload[i];
-        if (!file) continue;
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const fileName = item.relativePath.split("/").pop() || item.relativePath;
 
-        // Get the full path on device
-        const devicePath = file.name.startsWith("/")
-          ? file.name
-          : currentPath === "/"
-          ? `/${file.name}`
-          : `${currentPath}/${file.name}`;
+        setDownloadProgress(
+          `Downloading ${i + 1} of ${items.length}: ${fileName}`,
+        );
 
-        // Extract just the filename (not the full path)
-        const fileName = file.name.startsWith("/") ? file.name.split('/').pop() || file.name : file.name;
-
-        // Update progress
-        setDownloadProgress(`Downloading ${i + 1} of ${totalFiles}: ${fileName}`);
-
-        // Build the local save path with the same name as source
-        const localPath = await join(downloadDir, fileName);
+        const localPath = await join(
+          downloadDir,
+          ...item.relativePath.split("/"),
+        );
 
         try {
-          const downloadResult = await invoke<string>("download_file", {
+          const result = await invoke<string>("download_file", {
             deviceId: selectedDevice,
-            devicePath: devicePath,
+            devicePath: item.devicePath,
             localPath: localPath,
             conflictMode,
           });
 
-          if (downloadResult === "skipped") {
+          if (result === "skipped") {
             skippedCount++;
+          } else if (result === "renamed") {
+            renamedCount++;
           } else {
-            successCount++;
+            downloadedCount++;
           }
         } catch (err) {
           errorCount++;
-          console.error(`Download error for ${fileName}:`, err);
+          console.error(`Download error for ${item.devicePath}:`, err);
         }
       }
 
@@ -1918,15 +1966,24 @@ function App() {
       setDownloadProgress("");
       setSelectedFiles(new Set());
 
+      const parts: string[] = [];
+      if (downloadedCount > 0) parts.push(`downloaded ${downloadedCount}`);
+      if (renamedCount > 0) parts.push(`kept ${renamedCount} as copies`);
+      if (skippedCount > 0) parts.push(`skipped ${skippedCount} duplicate(s)`);
+      const summary = parts.length > 0 ? parts.join(", ") : "nothing new";
+
       if (errorCount > 0) {
-        setError(
-          `Downloaded ${successCount} file(s), skipped ${skippedCount} duplicate(s), ${errorCount} failed`
-        );
-      } else if (successCount === 0 && skippedCount > 0) {
-        setSuccessMessage(`Skipped ${skippedCount} duplicate file(s). Nothing new to download.`);
+        setError(`Download finished with ${errorCount} failure(s): ${summary}`);
       } else {
-        const skippedText = skippedCount > 0 ? ` (skipped ${skippedCount} duplicate(s))` : "";
-        setSuccessMessage(`Successfully downloaded ${successCount} file(s)${skippedText}`);
+        setSuccessMessage(`Download complete: ${summary}`);
+      }
+
+      if (revealAfterDownload) {
+        try {
+          await invoke("reveal_in_finder", { path: downloadDir });
+        } catch (err) {
+          console.error("Failed to reveal folder:", err);
+        }
       }
     } catch (err) {
       setDownloading(false);
@@ -3135,6 +3192,102 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* Download Options Dialog */}
+      {downloadOptionsOpen &&
+        (() => {
+          const entries = Array.from(selectedFiles)
+            .map(
+              (name) =>
+                files.find((f) => f.name === name) ||
+                searchResults.find((f) => f.name === name),
+            )
+            .filter((f): f is FileEntry => !!f);
+          const folderCount = entries.filter((f) => f.is_directory).length;
+          const fileCount = entries.length - folderCount;
+          const parts = [];
+          if (fileCount > 0)
+            parts.push(`${fileCount} file${fileCount === 1 ? "" : "s"}`);
+          if (folderCount > 0)
+            parts.push(`${folderCount} folder${folderCount === 1 ? "" : "s"}`);
+          return (
+            <div
+              className="modal-overlay"
+              onClick={() => setDownloadOptionsOpen(false)}
+            >
+              <div
+                className="modal-dialog download-options-dialog"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3>Download Options</h3>
+                <p className="download-options-summary">
+                  {parts.join(", ")} selected
+                </p>
+                <div className="conflict-options">
+                  {(
+                    [
+                      [
+                        "skip",
+                        "Skip duplicates",
+                        "Files that already exist are left alone",
+                      ],
+                      [
+                        "replace",
+                        "Replace",
+                        "Files that already exist are overwritten",
+                      ],
+                      [
+                        "keepBoth",
+                        "Keep both",
+                        'Duplicates are saved as "name (1).ext"',
+                      ],
+                    ] as [ConflictMode, string, string][]
+                  ).map(([value, label, hint]) => (
+                    <label
+                      key={value}
+                      className={`conflict-option ${conflictMode === value ? "active" : ""}`}
+                    >
+                      <input
+                        type="radio"
+                        name="conflict-mode"
+                        value={value}
+                        checked={conflictMode === value}
+                        onChange={() => setConflictMode(value)}
+                      />
+                      <span className="conflict-option-label">{label}</span>
+                      <span className="conflict-option-hint">{hint}</span>
+                    </label>
+                  ))}
+                </div>
+                <label className="reveal-option">
+                  <input
+                    type="checkbox"
+                    checked={revealAfterDownload}
+                    onChange={(e) => setRevealAfterDownload(e.target.checked)}
+                  />
+                  <span>Reveal in Finder when done</span>
+                </label>
+                <div className="modal-actions">
+                  <button
+                    onClick={() => setDownloadOptionsOpen(false)}
+                    className="cancel-btn"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDownloadOptionsOpen(false);
+                      performDownload();
+                    }}
+                    className="download-btn"
+                  >
+                    Continue…
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
       {showPreview && (
         <div className="modal-overlay" onClick={() => setShowPreview(false)}>
