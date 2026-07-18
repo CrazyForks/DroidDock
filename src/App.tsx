@@ -33,6 +33,8 @@ interface FilePreview {
   size: number;       // file size in bytes
 }
 
+type ConflictMode = "skip" | "replace" | "keepBoth";
+
 type SyncDirection = "PhoneToComputer" | "ComputerToPhone" | "BothWays";
 
 interface SyncOptions {
@@ -533,10 +535,29 @@ function App() {
   const [downloadProgress, setDownloadProgress] = useState<string>("");
   const [uploadProgress, setUploadProgress] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
-  const [skipDuplicateDownloads, setSkipDuplicateDownloads] = useState<boolean>(() => {
-    const saved = localStorage.getItem('droiddock-skip-duplicate-downloads');
-    return saved !== null ? JSON.parse(saved) : true;
+  const [conflictMode, setConflictMode] = useState<ConflictMode>(() => {
+    const saved = localStorage.getItem("droiddock-download-conflict-mode");
+    if (saved === "skip" || saved === "replace" || saved === "keepBoth") {
+      return saved;
+    }
+    // Migrate the legacy skip-duplicates toggle.
+    const legacy = localStorage.getItem("droiddock-skip-duplicate-downloads");
+    if (legacy !== null) {
+      return JSON.parse(legacy) ? "skip" : "replace";
+    }
+    return "skip";
   });
+  const [revealAfterDownload, setRevealAfterDownload] = useState<boolean>(() => {
+    const saved = localStorage.getItem("droiddock-reveal-after-download");
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+  const [downloadOptionsOpen, setDownloadOptionsOpen] = useState<boolean>(false);
+
+  // Download options state handlers (used by Tasks 6-7 for conflict resolution UI)
+  useEffect(() => {
+    // Intentionally keep these in closure for Tasks 6-7 to use
+    void [setConflictMode, setRevealAfterDownload, setDownloadOptionsOpen, downloadOptionsOpen];
+  }, []);
 
   // Sort state
   const [sortColumn, setSortColumn] = useState<'name' | 'size' | 'date'>('date');
@@ -678,10 +699,18 @@ function App() {
     localStorage.setItem('droiddock-view-mode', viewMode);
   }, [viewMode]);
 
-  // Save duplicate download preference
+  // Save download preferences; the legacy key is superseded by conflict mode
   useEffect(() => {
-    localStorage.setItem('droiddock-skip-duplicate-downloads', JSON.stringify(skipDuplicateDownloads));
-  }, [skipDuplicateDownloads]);
+    localStorage.setItem("droiddock-download-conflict-mode", conflictMode);
+    localStorage.removeItem("droiddock-skip-duplicate-downloads");
+  }, [conflictMode]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      "droiddock-reveal-after-download",
+      JSON.stringify(revealAfterDownload),
+    );
+  }, [revealAfterDownload]);
 
   // Reset orientation and dimensions when preview is closed
   useEffect(() => {
@@ -1871,7 +1900,7 @@ function App() {
             deviceId: selectedDevice,
             devicePath: devicePath,
             localPath: localPath,
-            skipExisting: skipDuplicateDownloads,
+            conflictMode,
           });
 
           if (downloadResult === "skipped") {
@@ -2701,19 +2730,6 @@ function App() {
                       <span className="toggle-switch"></span>
                     </label>
                   </div>
-                  <div className="settings-item">
-                    <label className="toggle-label">
-                      <span>Skip Duplicates</span>
-                      <input
-                        type="checkbox"
-                        checked={skipDuplicateDownloads}
-                        onChange={(e) => setSkipDuplicateDownloads(e.target.checked)}
-                        className="toggle-checkbox"
-                      />
-                      <span className="toggle-switch"></span>
-                    </label>
-                  </div>
-                  <div className="settings-divider"></div>
                   <div className="settings-item">
                     <button
                       onClick={() => {
