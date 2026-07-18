@@ -201,6 +201,39 @@ fn is_text_extension(ext: &str) -> bool {
     )
 }
 
+// Build "name (n).ext" for keep-both downloads.
+fn numbered_file_name(file_name: &str, n: u32) -> String {
+    let path = std::path::Path::new(file_name);
+    let stem = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or(file_name);
+    match path.extension().and_then(|e| e.to_str()) {
+        Some(ext) => format!("{} ({}).{}", stem, n, ext),
+        None => format!("{} ({})", stem, n),
+    }
+}
+
+// First non-existing "name (n).ext" sibling of `path`; `path` itself if free.
+fn unique_local_path(path: &std::path::Path) -> std::path::PathBuf {
+    if !path.exists() {
+        return path.to_path_buf();
+    }
+    let parent = path.parent().unwrap_or_else(|| std::path::Path::new(""));
+    let file_name = path
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("file");
+    let mut n = 1u32;
+    loop {
+        let candidate = parent.join(numbered_file_name(file_name, n));
+        if !candidate.exists() {
+            return candidate;
+        }
+        n += 1;
+    }
+}
+
 // Get thumbnail for an image or video file
 #[tauri::command]
 async fn get_thumbnail(
@@ -2739,5 +2772,23 @@ mod tests {
         // Local is newer, so device should be renamed to match local
         assert!(actions[0].direction.contains("Phone"));
         assert_eq!(actions[0].file_path, "a.txt");
+    }
+
+    #[test]
+    fn test_numbered_file_name_with_extension() {
+        assert_eq!(numbered_file_name("photo.jpg", 1), "photo (1).jpg");
+        assert_eq!(numbered_file_name("photo.jpg", 12), "photo (12).jpg");
+    }
+
+    #[test]
+    fn test_numbered_file_name_without_extension() {
+        assert_eq!(numbered_file_name("README", 3), "README (3)");
+    }
+
+    #[test]
+    fn test_numbered_file_name_dotfile() {
+        // ".nomedia" has no stem/extension split we care about; Path::file_stem
+        // returns ".nomedia", so the counter goes at the end.
+        assert_eq!(numbered_file_name(".nomedia", 1), ".nomedia (1)");
     }
 }
