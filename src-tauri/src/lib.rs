@@ -1025,7 +1025,13 @@ async fn list_files_recursive(
     let adb_cmd = get_adb_command();
 
     let escaped_path = device_path.replace("'", "'\\''");
-    let find_command = format!("find '{}' -type f", escaped_path);
+    // Exclude Android/data and Android/obb but keep Android/media.
+    // Redirect stderr to /dev/null to suppress permission denied errors.
+    let exclusions = r#"\( -path '*/Android/data' -o -path '*/Android/obb' \) -prune -o"#;
+    let find_command = format!(
+        "find '{}' {} -type f -print 2>/dev/null",
+        escaped_path, exclusions
+    );
 
     let output = shell
         .command(&adb_cmd)
@@ -1034,13 +1040,8 @@ async fn list_files_recursive(
         .await
         .map_err(|e| format!("Failed to list folder contents: {}", e))?;
 
-    if !output.status.success() {
-        return Err(format!(
-            "Failed to list folder contents: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
-    }
-
+    // Don't check exit status - find returns non-zero if it encounters permission errors
+    // but we've redirected stderr to /dev/null and want to process whatever results we got
     let files = String::from_utf8_lossy(&output.stdout)
         .lines()
         .map(|line| line.trim_end_matches('\r').to_string())
