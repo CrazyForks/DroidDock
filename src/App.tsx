@@ -1107,9 +1107,7 @@ function App() {
             if (focusedIndex < 0) {
               setFocusedIndex(0);
               const file = displayFiles[0];
-              if (!file.is_directory) {
-                setSelectedFiles(new Set([...selectedFiles, file.name]));
-              }
+              setSelectedFiles(new Set([...selectedFiles, file.name]));
               setTimeout(() => {
                 const focusedElement = document.querySelector('.file-row.focused, .grid-item.focused');
                 focusedElement?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -1120,9 +1118,7 @@ function App() {
             // First, select the anchor file if not already selected
             const currentFile = displayFiles[focusedIndex];
             let updatedSelection = new Set(selectedFiles);
-            if (!currentFile.is_directory && !selectedFiles.has(currentFile.name)) {
-              updatedSelection.add(currentFile.name);
-            }
+            updatedSelection.add(currentFile.name);
 
             let newIndex = focusedIndex;
 
@@ -1150,11 +1146,7 @@ function App() {
 
             setFocusedIndex(newIndex);
             const file = displayFiles[newIndex];
-
-            // Add to selection (only files, not directories)
-            if (!file.is_directory) {
-              updatedSelection.add(file.name);
-            }
+            updatedSelection.add(file.name);
             setSelectedFiles(updatedSelection);
 
             // Scroll into view
@@ -1614,21 +1606,13 @@ function App() {
     // Always update focused index when clicking on any item
     setFocusedIndex(index);
 
-    // Check if the file is a directory - don't allow selection of folders
     const visibleFiles = getDisplayFiles();
-    const file = visibleFiles[index];
-    if (file && file.is_directory) {
-      // Don't select folders - but we already set focus above
-      return;
-    }
 
     if (event.shiftKey && lastSelectedIndex !== -1) {
-      // Range select with Shift - only select files, not directories
+      // Range select with Shift
       const start = Math.min(lastSelectedIndex, index);
       const end = Math.max(lastSelectedIndex, index);
-      const rangeFiles = visibleFiles.slice(start, end + 1)
-        .filter(f => !f.is_directory)  // Exclude directories
-        .map(f => f.name);
+      const rangeFiles = visibleFiles.slice(start, end + 1).map(f => f.name);
 
       setSelectedFiles(prev => {
         const newSet = new Set(prev);
@@ -1656,9 +1640,7 @@ function App() {
 
   function selectAll() {
     const visibleFiles = getVisibleFiles();
-    // Only select files, not directories (since folder download is not supported)
-    const selectableFiles = visibleFiles.filter(f => !f.is_directory);
-    setSelectedFiles(new Set(selectableFiles.map(f => f.name)));
+    setSelectedFiles(new Set(visibleFiles.map(f => f.name)));
   }
 
   function clearSelection() {
