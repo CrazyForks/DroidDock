@@ -1054,12 +1054,20 @@ async fn list_files_recursive(
 #[tauri::command]
 async fn reveal_in_finder(app: tauri::AppHandle, path: String) -> Result<(), String> {
     let shell = app.shell();
-    shell
+    let output = shell
         .command("open")
         .args([&path])
         .output()
         .await
         .map_err(|e| format!("Failed to open folder: {}", e))?;
+
+    if !output.status.success() {
+        return Err(format!(
+            "Failed to open folder: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+
     Ok(())
 }
 
