@@ -1014,6 +1014,55 @@ async fn download_file(
     })
 }
 
+// List all files (not directories) under a device path, recursively.
+#[tauri::command]
+async fn list_files_recursive(
+    app: tauri::AppHandle,
+    device_id: String,
+    device_path: String,
+) -> Result<Vec<String>, String> {
+    let shell = app.shell();
+    let adb_cmd = get_adb_command();
+
+    let escaped_path = device_path.replace("'", "'\\''");
+    let find_command = format!("find '{}' -type f", escaped_path);
+
+    let output = shell
+        .command(&adb_cmd)
+        .args(["-s", &device_id, "shell", &find_command])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to list folder contents: {}", e))?;
+
+    if !output.status.success() {
+        return Err(format!(
+            "Failed to list folder contents: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+
+    let files = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(|line| line.trim_end_matches('\r').to_string())
+        .filter(|line| !line.is_empty())
+        .collect();
+
+    Ok(files)
+}
+
+// Open a local folder in Finder (macOS).
+#[tauri::command]
+async fn reveal_in_finder(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    let shell = app.shell();
+    shell
+        .command("open")
+        .args([&path])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to open folder: {}", e))?;
+    Ok(())
+}
+
 // Upload a file from the local filesystem to the Android device
 #[tauri::command]
 async fn upload_file(
@@ -2545,6 +2594,8 @@ pub fn run() {
             search_files,
             get_storage_info,
             download_file,
+            list_files_recursive,
+            reveal_in_finder,
             upload_file,
             preview_file,
             list_local_files,
