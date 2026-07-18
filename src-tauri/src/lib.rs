@@ -924,7 +924,7 @@ async fn download_file(
     device_id: String,
     device_path: String,
     local_path: String,
-    skip_existing: bool,
+    conflict_mode: String,
 ) -> Result<String, String> {
     let shell = app.shell();
     let adb_cmd = get_adb_command();
@@ -948,16 +948,35 @@ async fn download_file(
                 .ok()
         });
 
-    // Skip transfer when duplicate handling is enabled and destination already exists.
-    let local_file_path = std::path::Path::new(&local_path);
-    if skip_existing && local_file_path.exists() {
-        return Ok("skipped".to_string());
+    // Resolve the destination according to the chosen conflict mode.
+    let requested_path = std::path::PathBuf::from(&local_path);
+    let target_path = match conflict_mode.as_str() {
+        "skip" => {
+            if requested_path.exists() {
+                return Ok("skipped".to_string());
+            }
+            requested_path.clone()
+        }
+        "keepBoth" => unique_local_path(&requested_path),
+        // "replace" and anything unknown: pull over the requested path.
+        _ => requested_path.clone(),
+    };
+    let renamed = target_path != requested_path;
+
+    // Nested relative paths (folder downloads) need their parent dirs.
+    if let Some(parent) = target_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create destination folder: {}", e))?;
     }
+    let target_path_str = target_path
+        .to_str()
+        .ok_or_else(|| "Invalid destination path".to_string())?
+        .to_string();
 
     // Use adb pull to download the file
     let output = shell
         .command(&adb_cmd)
-        .args(["-s", &device_id, "pull", &device_path, &local_path])
+        .args(["-s", &device_id, "pull", &device_path, &target_path_str])
         .output()
         .await
         .map_err(|e| format!("Failed to download file: {}", e))?;
@@ -975,20 +994,24 @@ async fn download_file(
 
     // Set the modification time on the downloaded file to match the source
     if let Some(timestamp) = mtime {
-        if local_file_path.exists() {
+        if target_path.exists() {
             let mtime_system = UNIX_EPOCH + Duration::from_secs(timestamp);
-            let file = fs::File::open(local_file_path)
+            let file = fs::File::open(&target_path)
                 .map_err(|e| format!("Failed to open downloaded file: {}", e))?;
 
             file.set_modified(mtime_system)
                 .map_err(|e| format!("Failed to set modification time: {}", e))?;
 
             // Set creation/birth time on macOS to match the source file
-            let _ = set_creation_time(local_file_path, timestamp);
+            let _ = set_creation_time(&target_path, timestamp);
         }
     }
 
-    Ok("downloaded".to_string())
+    Ok(if renamed {
+        "renamed".to_string()
+    } else {
+        "downloaded".to_string()
+    })
 }
 
 // Upload a file from the local filesystem to the Android device
