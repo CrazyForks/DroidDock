@@ -2040,10 +2040,6 @@ function App() {
       });
 
       setPreviewData(preview);
-
-      if (preview.file_type === "unsupported") {
-        setError(`Cannot preview ${file.extension || "this"} file type. Supported types: images (jpg, png, gif, etc.) and text files.`);
-      }
     } catch (err) {
       setError(`Failed to preview file: ${err}`);
     } finally {
@@ -2090,10 +2086,6 @@ function App() {
       });
 
       setPreviewData(preview);
-
-      if (preview.file_type === "unsupported") {
-        setError(`Cannot preview ${file.extension || "this"} file type. Supported types: images (jpg, png, gif, etc.) and text files.`);
-      }
     } catch (err) {
       setError(`Failed to preview file: ${err}`);
     } finally {
@@ -2207,12 +2199,7 @@ function App() {
       });
 
       setPreviewData(preview);
-
-      if (preview.file_type === "unsupported") {
-        setError(`Cannot preview ${newFile.extension || "this"} file type. Supported types: images (jpg, png, gif, etc.) and text files.`);
-      } else {
-        setError(""); // Clear any previous errors
-      }
+      setError(""); // Clear any previous errors
     } catch (err) {
       setError(`Failed to preview file: ${err}`);
     } finally {
@@ -3389,11 +3376,29 @@ function App() {
                     </div>
                   )}
                   {previewData.file_type === "unsupported" && (
-                    <div className="preview-unsupported">
-                      <p>❌ Cannot preview this file type</p>
-                      <p className="preview-info">
-                        Supported types: images (jpg, png, gif, etc.) and text files
-                      </p>
+                    <div className="preview-two-column">
+                      <div className="preview-no-preview">
+                        <p>No preview</p>
+                      </div>
+                      <div className="preview-info-panel">
+                        <h4>File Information</h4>
+                        <div className="info-item">
+                          <span className="info-label">Name:</span>
+                          <span className="info-value">{previewFileName}</span>
+                        </div>
+                        <div className="info-item">
+                          <span className="info-label">Size:</span>
+                          <span className="info-value">{formatBytes(previewData.size)}</span>
+                        </div>
+                        {previewFileName.includes('.') && (
+                          <div className="info-item">
+                            <span className="info-label">Type:</span>
+                            <span className="info-value">
+                              {previewFileName.split('.').pop()?.toUpperCase()} file
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </>
