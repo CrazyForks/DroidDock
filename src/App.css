@@ -273,6 +273,48 @@ header {
   padding: 8px 12px;
 }
 
+.settings-dialog {
+  min-width: 340px;
+}
+
+.settings-item-label {
+  display: block;
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.theme-segmented {
+  display: flex;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.theme-segment {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 13px;
+  background-color: white;
+  border: none;
+  border-right: 1px solid #ddd;
+  cursor: pointer;
+  color: #333;
+}
+
+.theme-segment:last-child {
+  border-right: none;
+}
+
+.theme-segment:hover {
+  background-color: #f0f0f0;
+}
+
+.theme-segment.active {
+  background-color: #b0b0b0;
+  color: white;
+}
+
 .settings-divider {
   height: 1px;
   background-color: #e0e0e0;
@@ -2351,6 +2393,29 @@ tbody tr {
     background-color: #555;
   }
 
+  .settings-item-label {
+    color: #e0e0e0;
+  }
+
+  .theme-segmented {
+    border-color: #48484a;
+  }
+
+  .theme-segment {
+    background-color: #3a3a3c;
+    border-right-color: #48484a;
+    color: #c7c7cc;
+  }
+
+  .theme-segment:hover {
+    background-color: #48484a;
+  }
+
+  .theme-segment.active {
+    background-color: #6b6b6d;
+    color: white;
+  }
+
   thead {
     background-color: #2a2a2a;
   }
@@ -2500,8 +2565,21 @@ tbody tr {
     color: #ccc;
   }
 
+  .shortcuts-btn {
+    background-color: #3a3a3c;
+    color: #e0e0e0;
+  }
+
   .shortcuts-btn:hover {
-    background-color: #3a3a3a;
+    background-color: #48484a;
+  }
+
+  .sync-pattern-chip button {
+    color: #555;
+  }
+
+  .sync-pattern-chip button:hover {
+    color: #222;
   }
 
   .file-name {

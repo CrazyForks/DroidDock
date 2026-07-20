@@ -483,10 +483,17 @@ function App() {
   const [thumbnailsEnabled, setThumbnailsEnabled] = useState<boolean>(false);
   const [thumbnailCache, setThumbnailCache] = useState<Map<string, string>>(new Map());
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    const saved = localStorage.getItem('darkMode');
-    return saved !== null ? JSON.parse(saved) : false;
+  const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>(() => {
+    const saved = localStorage.getItem('themeMode');
+    if (saved === 'light' || saved === 'dark' || saved === 'system') return saved;
+    const legacy = localStorage.getItem('darkMode');
+    if (legacy !== null) return JSON.parse(legacy) ? 'dark' : 'light';
+    return 'system';
   });
+  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(
+    () => window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
+  const darkMode = themeMode === 'system' ? systemPrefersDark : themeMode === 'dark';
 
   // File selection and deletion state
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
@@ -616,8 +623,16 @@ function App() {
   // Apply dark mode theme
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
-    localStorage.setItem('darkMode', JSON.stringify(darkMode));
-  }, [darkMode]);
+    localStorage.setItem('themeMode', themeMode);
+  }, [darkMode, themeMode]);
+
+  // Track OS theme changes while in "Sync with System" mode
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: MediaQueryListEvent) => setSystemPrefersDark(e.matches);
+    media.addEventListener('change', handleChange);
+    return () => media.removeEventListener('change', handleChange);
+  }, []);
 
   // Load devices when ADB becomes available
   useEffect(() => {
@@ -713,21 +728,6 @@ function App() {
       setImageDimensions(null);
     }
   }, [showPreview]);
-
-  // Close settings dropdown when clicking outside
-  useEffect(() => {
-    if (!settingsOpen) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.settings-dropdown')) {
-        setSettingsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [settingsOpen]);
 
   // Initialize column view when switching to it or when path changes
   useEffect(() => {
@@ -891,6 +891,11 @@ function App() {
       if ((e.ctrlKey || e.metaKey) && e.key === '/') {
         e.preventDefault();
         setShowShortcutsHelp(true);
+      }
+      // Ctrl/Cmd + ,: Open settings
+      else if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+        e.preventDefault();
+        setSettingsOpen(true);
       }
       // Ctrl/Cmd + 1: Switch to table view
       else if ((e.ctrlKey || e.metaKey) && e.key === '1') {
@@ -2736,57 +2741,6 @@ function App() {
               >
                 ⚙
               </button>
-              {settingsOpen && (
-                <div className="settings-menu">
-                  <div className="settings-item">
-                    <label className="toggle-label">
-                      <span>Show Thumbnails</span>
-                      <input
-                        type="checkbox"
-                        checked={thumbnailsEnabled}
-                        onChange={(e) => setThumbnailsEnabled(e.target.checked)}
-                        className="toggle-checkbox"
-                      />
-                      <span className="toggle-switch"></span>
-                    </label>
-                  </div>
-                  <div className="settings-item">
-                    <label className="toggle-label">
-                      <span>Show Hidden Files</span>
-                      <input
-                        type="checkbox"
-                        checked={showHiddenFiles}
-                        onChange={(e) => setShowHiddenFiles(e.target.checked)}
-                        className="toggle-checkbox"
-                      />
-                      <span className="toggle-switch"></span>
-                    </label>
-                  </div>
-                  <div className="settings-item">
-                    <label className="toggle-label">
-                      <span>Dark Mode</span>
-                      <input
-                        type="checkbox"
-                        checked={darkMode}
-                        onChange={(e) => setDarkMode(e.target.checked)}
-                        className="toggle-checkbox"
-                      />
-                      <span className="toggle-switch"></span>
-                    </label>
-                  </div>
-                  <div className="settings-item">
-                    <button
-                      onClick={() => {
-                        setShowShortcutsHelp(true);
-                        setSettingsOpen(false);
-                      }}
-                      className="shortcuts-btn"
-                    >
-                      ⌨️ Keyboard Shortcuts
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -3148,6 +3102,70 @@ function App() {
             </div>
           )}
         </>
+      )}
+
+      {settingsOpen && (
+        <div className="modal-overlay" onClick={() => setSettingsOpen(false)}>
+          <div className="modal-dialog settings-dialog" onClick={(e) => e.stopPropagation()} aria-modal="true">
+            <h3>Settings</h3>
+            <div className="settings-item">
+              <label className="toggle-label">
+                <span>Show Thumbnails</span>
+                <input
+                  type="checkbox"
+                  checked={thumbnailsEnabled}
+                  onChange={(e) => setThumbnailsEnabled(e.target.checked)}
+                  className="toggle-checkbox"
+                />
+                <span className="toggle-switch"></span>
+              </label>
+            </div>
+            <div className="settings-item">
+              <label className="toggle-label">
+                <span>Show Hidden Files</span>
+                <input
+                  type="checkbox"
+                  checked={showHiddenFiles}
+                  onChange={(e) => setShowHiddenFiles(e.target.checked)}
+                  className="toggle-checkbox"
+                />
+                <span className="toggle-switch"></span>
+              </label>
+            </div>
+            <div className="settings-item">
+              <span className="settings-item-label">Appearance</span>
+              <div className="theme-segmented" role="radiogroup" aria-label="Appearance">
+                {(['light', 'dark', 'system'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    role="radio"
+                    aria-checked={themeMode === mode}
+                    className={`theme-segment${themeMode === mode ? ' active' : ''}`}
+                    onClick={() => setThemeMode(mode)}
+                  >
+                    {mode === 'light' ? 'Light' : mode === 'dark' ? 'Dark' : 'Sync with System'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="settings-item">
+              <button
+                onClick={() => {
+                  setShowShortcutsHelp(true);
+                  setSettingsOpen(false);
+                }}
+                className="shortcuts-btn"
+              >
+                ⌨️ Keyboard Shortcuts
+              </button>
+            </div>
+            <div className="modal-actions">
+              <button onClick={() => setSettingsOpen(false)} className="cancel-btn">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showDeleteConfirm && (
@@ -3520,6 +3538,10 @@ function App() {
                 <div className="shortcut-item">
                   <span className="shortcut-keys">Cmd + /</span>
                   <span className="shortcut-desc">Show this help</span>
+                </div>
+                <div className="shortcut-item">
+                  <span className="shortcut-keys">Cmd + ,</span>
+                  <span className="shortcut-desc">Open settings</span>
                 </div>
               </div>
             </div>
