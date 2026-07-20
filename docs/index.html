@@ -1,429 +1,1169 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DroidDock - Browse Android Files on macOS</title>
-    <meta name="description" content="A beautiful macOS app for browsing and managing Android device files via ADB. Fast, intuitive, and powerful.">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="icon" type="image/svg+xml" href="design/icon-design.svg">
+    <meta
+      name="description"
+      content="A native macOS app for browsing and managing Android device files via ADB. Fast, intuitive, and free."
+    />
+    <link rel="icon" type="image/svg+xml" href="design/icon-design.svg" />
     <style>
-        .hero-bg {
-            background: #6b8db5;
+      :root {
+        --paper: #f7f5f1;
+        --ink: #1c1a17;
+        --dim: #726b5e;
+        --line: #e2ddd1;
+        --accent: #a6462b;
+        --card: #ffffff;
+        --serif: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+        --sans: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+      }
+      a {
+        color: inherit;
+      }
+      code {
+        font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      }
+
+      /* Nav */
+      nav {
+        max-width: 1120px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.6rem 2rem;
+      }
+      .logo {
+        font-family: var(--serif);
+        font-size: 1.15rem;
+        letter-spacing: -0.01em;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        color: var(--ink);
+      }
+      .logo img {
+        width: 22px;
+        height: 22px;
+        display: block;
+      }
+      nav .links {
+        display: flex;
+        gap: 2rem;
+        font-size: 0.85rem;
+        color: var(--dim);
+      }
+      nav .links a {
+        text-decoration: none;
+      }
+      nav .links a:hover {
+        color: var(--ink);
+      }
+      .btn-nav {
+        border: 1px solid var(--ink);
+        padding: 0.5rem 1.1rem;
+        border-radius: 5px;
+        font-size: 0.8rem;
+        text-decoration: none;
+        color: var(--ink);
+        white-space: nowrap;
+      }
+      .btn-nav:hover {
+        background: var(--ink);
+        color: var(--paper);
+      }
+
+      /* Hero */
+      header.hero {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 2.5rem 2rem 1rem;
+        text-align: center;
+      }
+      .eyebrow {
+        font-size: 0.75rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+        font-weight: 600;
+      }
+      h1 {
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: clamp(2.4rem, 6vw, 4rem);
+        line-height: 1.05;
+        letter-spacing: -0.015em;
+        margin: 0.8rem 0 1.1rem;
+      }
+      h1 em {
+        font-style: italic;
+        color: var(--accent);
+      }
+      .dek {
+        max-width: 46ch;
+        margin: 0 auto;
+        color: var(--dim);
+        font-size: 1.15rem;
+        line-height: 1.6;
+      }
+      .cta {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin: 2.2rem 0 1.2rem;
+        flex-wrap: wrap;
+      }
+      .btn {
+        padding: 0.9rem 1.7rem;
+        border-radius: 7px;
+        text-decoration: none;
+        font-size: 0.92rem;
+        font-weight: 600;
+        transition: 0.15s;
+      }
+      .btn.primary {
+        background: var(--ink);
+        color: var(--paper);
+      }
+      .btn.primary:hover {
+        background: var(--accent);
+      }
+      .btn.secondary {
+        border: 1px solid var(--line);
+        color: var(--ink);
+        background: #fff;
+      }
+      .btn.secondary:hover {
+        border-color: var(--ink);
+      }
+      .quicklinks {
+        font-size: 0.85rem;
+        color: var(--dim);
+        margin-bottom: 1rem;
+      }
+      .quicklinks a {
+        text-decoration: underline;
+        text-decoration-color: var(--line);
+      }
+      .quicklinks a:hover {
+        color: var(--ink);
+      }
+      .version-line {
+        font-size: 0.78rem;
+        color: var(--dim);
+        margin-top: 0.4rem;
+      }
+      .brew-block {
+        margin: 1.6rem auto 0;
+        display: inline-block;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0.7rem 1.1rem;
+      }
+      .brew-block code {
+        font-size: 0.82rem;
+        color: var(--ink);
+      }
+
+      /* Product stage */
+      .stage {
+        max-width: 1120px;
+        margin: 3rem auto 5rem;
+        padding: 0 2rem;
+      }
+      .window {
+        border-radius: 12px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow:
+          0 1px 2px rgba(28, 26, 23, 0.06),
+          0 40px 80px -30px rgba(28, 26, 23, 0.35),
+          0 0 0 1px var(--line);
+      }
+      .window img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .caption {
+        text-align: center;
+        color: var(--dim);
+        font-size: 0.85rem;
+        margin-top: 1rem;
+        font-family: var(--serif);
+        font-style: italic;
+      }
+
+      /* Features band */
+      .band {
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: #fbf9f5;
+      }
+      .features {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 4.5rem 2rem;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 3rem;
+      }
+      .feature .icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 9px;
+        background: var(--ink);
+        color: var(--paper);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+      }
+      .feature h3 {
+        font-size: 1.05rem;
+        margin: 0 0 0.5rem;
+      }
+      .feature p {
+        color: var(--dim);
+        font-size: 0.9rem;
+        line-height: 1.6;
+        margin: 0;
+      }
+
+      /* Generic section */
+      section {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 5rem 2rem;
+      }
+      section h2 {
+        font-family: var(--serif);
+        font-weight: 400;
+        font-size: 2.2rem;
+        text-align: center;
+        margin: 0 0 0.6rem;
+      }
+      section > p.lede {
+        text-align: center;
+        color: var(--dim);
+        margin: 0 0 3rem;
+      }
+
+      /* Setup steps */
+      .steps {
+        max-width: 760px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1.2rem;
+      }
+      .step {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 1.5rem 1.7rem;
+        display: flex;
+        gap: 1.2rem;
+      }
+      .step .num {
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+        font-family: var(--serif);
+      }
+      .step h3 {
+        margin: 0 0 0.5rem;
+        font-size: 1.05rem;
+      }
+      .step p {
+        margin: 0 0 0.6rem;
+        color: var(--dim);
+        font-size: 0.92rem;
+        line-height: 1.6;
+      }
+      .step p:last-child {
+        margin-bottom: 0;
+      }
+      .step ol {
+        margin: 0.4rem 0;
+        padding-left: 1.2rem;
+        color: var(--dim);
+        font-size: 0.88rem;
+        line-height: 1.7;
+      }
+      .step code.cmd {
+        display: block;
+        background: #f1ede3;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 0.6rem 0.9rem;
+        font-size: 0.85rem;
+        margin: 0.5rem 0;
+      }
+      .step a {
+        color: var(--accent);
+      }
+      .done-badge {
+        text-align: center;
+        margin-top: 0.5rem;
+      }
+      .done-badge span {
+        display: inline-block;
+        background: #eef6ea;
+        color: #3f6b2c;
+        padding: 0.7rem 1.4rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      /* FAQ */
+      .faq-list {
+        max-width: 760px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .faq-item {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 1.4rem 1.6rem;
+      }
+      .faq-item h3 {
+        margin: 0 0 0.5rem;
+        font-size: 1rem;
+      }
+      .faq-item p {
+        margin: 0 0 0.5rem;
+        color: var(--dim);
+        font-size: 0.9rem;
+        line-height: 1.6;
+      }
+      .faq-item p:last-child {
+        margin-bottom: 0;
+      }
+      .faq-item code.cmd {
+        display: block;
+        background: #f1ede3;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 0.55rem 0.8rem;
+        font-size: 0.8rem;
+      }
+
+      /* Gallery */
+      .g-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+      }
+      .g-card {
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow:
+          0 1px 2px rgba(28, 26, 23, 0.06),
+          0 0 0 1px var(--line);
+      }
+      .g-card img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      .g-card .lb {
+        padding: 0.9rem 1.1rem;
+      }
+      .g-card .lb b {
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+      .g-card .lb p {
+        color: var(--dim);
+        font-size: 0.8rem;
+        margin: 0.2rem 0 0;
+      }
+      .gallery-group {
+        margin-bottom: 3.5rem;
+      }
+      .gallery-group:last-child {
+        margin-bottom: 0;
+      }
+      .gallery-group h3 {
+        font-size: 0.78rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--accent);
+        text-align: center;
+        margin: 0 0 1.5rem;
+        font-weight: 600;
+      }
+
+      /* Release notes */
+      .releases {
+        max-width: 760px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+      }
+      .release-item {
+        display: block;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 1.4rem 1.7rem;
+        text-decoration: none;
+        color: var(--ink);
+        transition: 0.15s;
+      }
+      .release-item:hover {
+        border-color: var(--accent);
+      }
+      .release-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      .release-item h3 {
+        margin: 0 0 0.3rem;
+        font-family: var(--serif);
+        font-size: 1.3rem;
+        font-weight: 400;
+      }
+      .release-item .date {
+        color: var(--dim);
+        font-size: 0.78rem;
+        margin-bottom: 0.5rem;
+      }
+      .release-item .desc {
+        color: var(--dim);
+        font-size: 0.88rem;
+        line-height: 1.55;
+        margin: 0;
+      }
+      .release-item .arrow {
+        color: var(--dim);
+        font-size: 1.3rem;
+        flex-shrink: 0;
+      }
+      .release-all {
+        text-align: center;
+        border: 1px dashed var(--line);
+        color: var(--accent);
+        font-weight: 600;
+        font-size: 0.88rem;
+      }
+
+      /* Download section */
+      .download-panel {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 2.5rem;
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+      .download-panel .btn.primary {
+        padding: 1rem 2.2rem;
+        font-size: 1rem;
+      }
+      .download-panel .note {
+        color: var(--dim);
+        font-size: 0.85rem;
+        margin-top: 1rem;
+      }
+      .req-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+      }
+      .req-block {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 1.6rem 1.8rem;
+      }
+      .req-block h4 {
+        margin: 0 0 0.8rem;
+        font-size: 0.95rem;
+      }
+      .req-block ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        color: var(--dim);
+        font-size: 0.88rem;
+        line-height: 1.9;
+      }
+      .install-steps {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 1.8rem 2rem;
+        margin-bottom: 1.5rem;
+      }
+      .install-steps h4 {
+        margin: 0 0 1rem;
+        font-size: 1rem;
+      }
+      .install-steps ol {
+        margin: 0;
+        padding-left: 1.2rem;
+        color: var(--dim);
+        font-size: 0.9rem;
+        line-height: 1.9;
+      }
+      .warn-box {
+        margin-top: 1.2rem;
+        padding: 0.9rem 1.1rem;
+        background: #fdf5ee;
+        border-left: 3px solid var(--accent);
+        border-radius: 6px;
+        font-size: 0.85rem;
+        color: #6b4429;
+        line-height: 1.6;
+      }
+      .warn-box code {
+        background: #f5e8dc;
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.78rem;
+      }
+
+      footer {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 3rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: var(--dim);
+        font-size: 0.82rem;
+        border-top: 1px solid var(--line);
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      footer .foot-links a {
+        margin-left: 1.4rem;
+        text-decoration: none;
+        color: var(--dim);
+      }
+      footer .foot-links a:hover {
+        color: var(--ink);
+      }
+
+      @media (max-width: 720px) {
+        nav .links {
+          display: none;
         }
-        .feature-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        .features {
+          grid-template-columns: 1fr;
         }
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        .g-grid {
+          grid-template-columns: 1fr;
         }
-        .screenshot {
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            transition: transform 0.3s ease;
+        .req-grid {
+          grid-template-columns: 1fr;
         }
-        .screenshot:hover {
-            transform: scale(1.02);
+        footer {
+          flex-direction: column;
+          text-align: center;
         }
+      }
     </style>
-</head>
-<body class="bg-white">
-    <!-- Hero Section -->
-    <section class="hero-bg text-white py-20 px-4">
-        <div class="max-w-6xl mx-auto text-center">
-            <img src="design/icon-design.svg" alt="DroidDock Icon" class="w-32 h-32 mx-auto mb-8 drop-shadow-2xl">
-            <h1 class="text-5xl md:text-6xl font-bold mb-6">DroidDock</h1>
-            <p class="text-xl md:text-2xl mb-8 text-white/95">Browse Android files on macOS with style</p>
-            <p class="text-lg mb-10 max-w-2xl mx-auto text-white/85">
-                A beautiful, native macOS application for browsing and managing your Android device files via ADB.
-                Fast, intuitive, and powerful.
-            </p>
-             <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                 <a id="download-btn" href="#download" class="bg-white text-gray-800 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-gray-100 transition shadow-lg border-2 border-[#FFDD00]">
-                     📦 Download for macOS
-                 </a>
-                 <a href="https://github.com/rajivm1991/DroidDock" class="bg-transparent border-2 border-white px-8 py-4 rounded-lg text-lg font-semibold text-white hover:bg-white hover:text-gray-600 transition">
-                     ⭐ View on GitHub
-                 </a>
-             </div>
-             <div class="mt-6">
-                 <p class="text-lg mb-4 text-white/95">Or install via Homebrew:</p>
-                 <div class="bg-white bg-opacity-10 backdrop-blur-sm p-4 rounded-lg inline-block">
-                     <code class="text-white font-mono text-sm">brew tap rajivm1991/droiddock &amp;&amp; brew install --cask droiddock</code>
-                 </div>
-             </div>
-            <p class="mt-6 text-sm text-white/85">Version 0.4.1 • macOS 10.15+ • Free & Open Source</p>
+  </head>
+  <body>
+    <nav>
+      <a class="logo" href="#"
+        ><img src="design/icon-design.svg" alt="" /> DroidDock</a
+      >
+      <div class="links">
+        <a href="#setup">Setup</a>
+        <a href="#features">Features</a>
+        <a href="#faq">FAQ</a>
+        <a href="#releases">Releases</a>
+      </div>
+      <a class="btn-nav" href="https://github.com/rajivm1991/DroidDock"
+        >GitHub ↗</a
+      >
+    </nav>
+
+    <header class="hero">
+      <div class="eyebrow">For macOS · Free &amp; Open Source</div>
+      <h1>Your Android's files,<br /><em>right on your Mac.</em></h1>
+      <p class="dek">
+        DroidDock is a native file manager for your Android phone — browse,
+        preview, sync, and download over a USB cable. No cloud account, no
+        cables-and-folders dance.
+      </p>
+      <div class="cta">
+        <a id="download-btn" class="btn primary" href="#download"
+          >📦 Download for macOS</a
+        >
+        <a class="btn secondary" href="#setup">First-time setup (5 min)</a>
+      </div>
+      <div class="quicklinks">
+        New to Android tools? <a href="#setup">Setup guide</a> ·
+        <a href="#faq">FAQ</a>
+      </div>
+      <div class="brew-block">
+        <code
+          >brew tap rajivm1991/droiddock &amp;&amp; brew install --cask
+          droiddock</code
+        >
+      </div>
+      <div class="version-line">
+        Version 0.5.0 • macOS 10.15+ • Free &amp; Open Source
+      </div>
+    </header>
+
+    <div class="stage">
+      <div class="window">
+        <img
+          src="screenshots/folder-download-options.png"
+          alt="DroidDock showing download options for an Android folder"
+        />
+      </div>
+      <p class="caption">
+        Real DroidDock window — recursive folder download with conflict
+        handling, mid‑transfer.
+      </p>
+    </div>
+
+    <div class="band">
+      <div class="features" id="features">
+        <div class="feature">
+          <div class="icon">⇄</div>
+          <h3>Folder Sync</h3>
+          <p>
+            Mirror whole folders between Mac and Android with pattern filters
+            and timestamp preservation.
+          </p>
         </div>
+        <div class="feature">
+          <div class="icon">⌘</div>
+          <h3>Keyboard-First</h3>
+          <p>
+            Table, grid, and column views, all fully navigable without touching
+            the trackpad.
+          </p>
+        </div>
+        <div class="feature">
+          <div class="icon">◐</div>
+          <h3>Light, Dark, or Auto</h3>
+          <p>
+            Follows your Mac's appearance automatically, or set it yourself from
+            Cmd+,.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- First Time Setup -->
+    <section id="setup">
+      <h2>First Time Setup</h2>
+      <p class="lede">
+        You don't need to know anything about Android development. This takes
+        about 5 minutes, once.
+      </p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="num">1</div>
+          <div>
+            <h3>Install DroidDock</h3>
+            <p>
+              Download the DMG below, open it, and drag DroidDock into
+              Applications. If macOS says it's "damaged", that's a normal
+              Gatekeeper warning for apps outside the App Store — see the
+              <a href="#faq">FAQ</a> for the one-line fix.
+            </p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">2</div>
+          <div>
+            <h3>Install ADB</h3>
+            <p>
+              DroidDock talks to your phone through ADB, Google's own official
+              tool for connecting a computer to an Android device. Open Terminal
+              and run:
+            </p>
+            <code class="cmd">brew install android-platform-tools</code>
+            <p>
+              Don't have Homebrew? Install it first from
+              <a href="https://brew.sh">brew.sh</a>.
+            </p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">3</div>
+          <div>
+            <h3>Enable USB Debugging on your phone</h3>
+            <p>
+              This is a hidden Android setting that tells your phone to trust
+              computer connections.
+            </p>
+            <ol>
+              <li>Open <strong>Settings → About phone</strong></li>
+              <li>Tap <strong>Build number</strong> 7 times</li>
+              <li>
+                Go back to
+                <strong>Settings → System → Developer options</strong>
+              </li>
+              <li>Enable <strong>USB debugging</strong></li>
+            </ol>
+            <p>
+              Worried this is risky? See
+              <a href="#faq">"Is USB debugging safe?"</a> below.
+            </p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">4</div>
+          <div>
+            <h3>Connect your phone</h3>
+            <p>
+              Plug your phone into your Mac with a USB cable. On your phone, tap
+              <strong>Allow</strong> on the "Allow USB debugging?" prompt (check
+              "Always allow" to skip this next time). Open DroidDock — your
+              phone appears in the device dropdown within a few seconds.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="done-badge">
+        <span>🎉 Done — select your device and start browsing</span>
+      </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="py-20 px-4">
-        <div class="max-w-6xl mx-auto">
-            <h2 class="text-4xl font-bold text-center mb-4 text-gray-800">Features</h2>
-            <p class="text-center text-gray-600 mb-12 text-lg">Everything you need to manage Android files from your Mac</p>
+    <!-- FAQ -->
+    <section id="faq">
+      <h2>Frequently Asked Questions</h2>
+      <p class="lede">New to Android development terms? Start here.</p>
 
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-                <div class="feature-card bg-white p-6 rounded-xl shadow-md">
-                    <div class="text-4xl mb-4">👁️</div>
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">File Preview</h3>
-                    <p class="text-gray-600">View images and text files without downloading. Press Space for quick preview or double-click any file.</p>
-                </div>
+      <div class="faq-list">
+        <div class="faq-item">
+          <h3>Is USB debugging safe?</h3>
+          <p>
+            Yes. USB debugging is Android's official developer interface — the
+            same one Android Studio and every Android tool uses. Enabling it
+            does not root your phone, void your warranty, or expose your phone
+            to the internet. It only allows a computer you've physically
+            connected and explicitly approved (via the "Allow USB debugging?"
+            prompt) to communicate with your device. You can turn it off anytime
+            afterward in Developer options.
+          </p>
+        </div>
 
-                <div class="feature-card bg-white p-6 rounded-xl shadow-md">
-                    <div class="text-4xl mb-4">📱</div>
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">Device Management</h3>
-                    <p class="text-gray-600">Connect and browse multiple Android devices simultaneously with automatic device detection.</p>
-                </div>
+        <div class="faq-item">
+          <h3>What is ADB?</h3>
+          <p>
+            ADB (Android Debug Bridge) is a command-line tool made by Google
+            that lets a computer talk to an Android device — list files, install
+            apps, view logs, etc. DroidDock uses it under the hood so you get a
+            normal file-browser window instead of typing commands.
+          </p>
+        </div>
 
-                <div class="feature-card bg-white p-6 rounded-xl shadow-md">
-                    <div class="text-4xl mb-4">📁</div>
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">File Browser</h3>
-                    <p class="text-gray-600">Navigate Android filesystem with a beautiful, intuitive interface. 3 view modes: Table, Grid, Column.</p>
-                </div>
+        <div class="faq-item">
+          <h3>Do I need to redo this setup every time?</h3>
+          <p>
+            No. Once ADB is installed and you've checked "Always allow" on the
+            debugging prompt, just plug in your phone and open DroidDock — no
+            setup required.
+          </p>
+        </div>
 
-                <div class="feature-card bg-white p-6 rounded-xl shadow-md">
-                    <div class="text-4xl mb-4">⌨️</div>
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">Keyboard Navigation</h3>
-                    <p class="text-gray-600">Full keyboard control with arrow keys, Space for preview, and Cmd+1/2/3 for view switching.</p>
-                </div>
+        <div class="faq-item">
+          <h3>macOS says DroidDock is "damaged" — what do I do?</h3>
+          <p>
+            This is Apple's Gatekeeper warning for apps distributed outside the
+            App Store, not a real problem. Run this once in Terminal, then open
+            the app normally:
+          </p>
+          <code class="cmd">xattr -cr /Applications/DroidDock.app</code>
+        </div>
 
-                <div class="feature-card bg-white p-6 rounded-xl shadow-md">
-                    <div class="text-4xl mb-4">⬇️</div>
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">Fast Downloads</h3>
-                    <p class="text-gray-600">Pull files from Android to Mac with drag-and-drop or single-click downloads.</p>
-                </div>
+        <div class="faq-item">
+          <h3>Does DroidDock collect my data?</h3>
+          <p>
+            No. DroidDock does not collect or transmit any personal data. All
+            communication stays between your Mac and your phone over the USB
+            cable.
+          </p>
+        </div>
+      </div>
+    </section>
 
-                <div class="feature-card bg-white p-6 rounded-xl shadow-md">
-                    <div class="text-4xl mb-4">⬆️</div>
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">Easy Uploads</h3>
-                    <p class="text-gray-600">Push files to Android device with drag-and-drop from Finder or file picker.</p>
-                </div>
+    <!-- Gallery -->
+    <section>
+      <h2>See it in action</h2>
+      <p class="lede">A few of the screens you'll actually use</p>
 
-                <div class="feature-card bg-white p-6 rounded-xl shadow-md">
-                    <div class="text-4xl mb-4">🖼️</div>
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">Image Previews</h3>
-                    <p class="text-gray-600">View image thumbnails directly in the file browser for quick identification.</p>
-                </div>
-
-                <div class="feature-card bg-white p-6 rounded-xl shadow-md">
-                    <div class="text-4xl mb-4">💾</div>
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">Storage Info</h3>
-                    <p class="text-gray-600">Monitor device storage with real-time usage statistics and visual indicators.</p>
-                </div>
-
-                <div class="feature-card bg-white p-6 rounded-xl shadow-md">
-                    <div class="text-4xl mb-4">🔍</div>
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">Quick Search</h3>
-                    <p class="text-gray-600">Find files instantly with built-in search functionality across directories.</p>
-                </div>
-
-                <div class="feature-card bg-white p-6 rounded-xl shadow-md">
-                    <div class="text-4xl mb-4">🌓</div>
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">Dark Mode</h3>
-                    <p class="text-gray-600">Beautiful dark theme that's easy on the eyes during late-night file transfers.</p>
-                </div>
-
-                <div class="feature-card bg-white p-6 rounded-xl shadow-md">
-                    <div class="text-4xl mb-4">🔄</div>
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">Auto-Updates</h3>
-                    <p class="text-gray-600">Stay up-to-date with automatic update notifications and one-click installations.</p>
-                </div>
-
-                <div class="feature-card bg-white p-6 rounded-xl shadow-md">
-                    <div class="text-4xl mb-4">🔁</div>
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">Folder Sync</h3>
-                    <p class="text-gray-600">Sync entire folders between Mac and Android. Filter by file pattern, exclude system files, and preserve timestamps.</p>
-                </div>
+      <div class="gallery-group">
+        <h3>✨ New in v0.5.0</h3>
+        <div class="g-grid">
+          <div class="g-card">
+            <img
+              src="screenshots/folder-download-options.png"
+              alt="DroidDock Recursive Folder Download"
+            />
+            <div class="lb">
+              <b>Recursive Folder Download</b>
+              <p>Download entire folders with per-download conflict handling</p>
             </div>
-
-            <!-- Screenshots -->
-            <h3 class="text-3xl font-bold text-center mb-8 text-gray-800">Screenshots</h3>
-            
-            <!-- New in v0.4.1 -->
-            <div class="mb-12">
-                <h4 class="text-2xl font-semibold text-center mb-6 text-[#b0b0b0]">✨ New in v0.4.1</h4>
-                <div class="grid md:grid-cols-2 gap-8">
-                    <div>
-                        <img src="screenshots/droiddock-2026-02-15-folder-sync.png" alt="DroidDock Folder Sync" class="screenshot w-full">
-                        <p class="text-center mt-3 text-gray-600 font-semibold">Folder Sync</p>
-                        <p class="text-center text-sm text-gray-500">Sync entire folders between Mac and Android with filtering options</p>
-                    </div>
-                    <div>
-                        <img src="screenshots/droiddock-2026-02-15-saved-sync.png" alt="DroidDock Saved Sync Configurations" class="screenshot w-full">
-                        <p class="text-center mt-3 text-gray-600 font-semibold">Saved Sync Configurations</p>
-                        <p class="text-center text-sm text-gray-500">Save and reload sync setups with one click</p>
-                    </div>
-                    <div>
-                        <img src="screenshots/droiddock-2026-02-15-sync-preview.png" alt="DroidDock Sync Preview Modal" class="screenshot w-full">
-                        <p class="text-center mt-3 text-gray-600 font-semibold">Sync Preview</p>
-                        <p class="text-center text-sm text-gray-500">Preview what will change before running the sync</p>
-                    </div>
-                </div>
+          </div>
+          <div class="g-card">
+            <img
+              src="screenshots/settings.png"
+              alt="DroidDock Settings and Appearance"
+            />
+            <div class="lb">
+              <b>Settings &amp; Appearance</b>
+              <p>Settings modal with Light/Dark/Sync with System control</p>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <!-- New in v0.2.1 -->
-            <div class="mb-12">
-                <h4 class="text-2xl font-semibold text-center mb-6 text-[#b0b0b0]">✨ New in v0.2.1</h4>
-                <div class="grid md:grid-cols-2 gap-8">
-                    <div>
-                        <img src="screenshots/droiddock-2026-01-01-minimalist-ui.png" alt="DroidDock Minimalist UI" class="screenshot w-full">
-                        <p class="text-center mt-3 text-gray-600 font-semibold">Minimalist UI</p>
-                        <p class="text-center text-sm text-gray-500">95% grayscale aesthetic with clean, professional design</p>
-                    </div>
-                    <div>
-                        <img src="screenshots/droiddock-2026-01-01-preview-model.png" alt="DroidDock File Preview Modal" class="screenshot w-full">
-                        <p class="text-center mt-3 text-gray-600 font-semibold">Enhanced File Preview Modal</p>
-                        <p class="text-center text-sm text-gray-500">Minimalist preview with clickable column sorting</p>
-                    </div>
-                </div>
+      <div class="gallery-group">
+        <h3>Folder Sync</h3>
+        <div class="g-grid">
+          <div class="g-card">
+            <img
+              src="screenshots/folder-sync.png"
+              alt="DroidDock Folder Sync"
+            />
+            <div class="lb">
+              <b>Folder Sync</b>
+              <p>
+                Sync entire folders between Mac and Android with filtering
+                options
+              </p>
             </div>
+          </div>
+          <div class="g-card">
+            <img
+              src="screenshots/folder-sync-preview.png"
+              alt="DroidDock Sync Preview Modal"
+            />
+            <div class="lb">
+              <b>Sync Preview</b>
+              <p>Preview what will change before running the sync</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-            <!-- Main Interface -->
+      <div class="gallery-group">
+        <h3>Main Interface</h3>
+        <div class="g-grid">
+          <div class="g-card">
+            <img
+              src="screenshots/preview-model.png"
+              alt="DroidDock File Preview Modal"
+            />
+            <div class="lb">
+              <b>File Preview</b>
+              <p>Preview images and text without downloading</p>
+            </div>
+          </div>
+          <div class="g-card">
+            <img
+              src="screenshots/list-view.png"
+              alt="DroidDock List View - Compact Layout"
+            />
+            <div class="lb">
+              <b>List View</b>
+              <p>Browse files in a clean, space-efficient list format</p>
+            </div>
+          </div>
+          <div class="g-card">
+            <img
+              src="screenshots/folder-gird-view.png"
+              alt="DroidDock Grid View - Folders"
+            />
+            <div class="lb">
+              <b>Grid View</b>
+              <p>Browse folders visually in grid layout</p>
+            </div>
+          </div>
+          <div class="g-card">
+            <img
+              src="screenshots/image-grid-view.png"
+              alt="DroidDock Grid View - Thumbnail Gallery"
+            />
+            <div class="lb">
+              <b>Image Thumbnails</b>
+              <p>Visual browsing with image thumbnails</p>
+            </div>
+          </div>
+          <div class="g-card">
+            <img
+              src="screenshots/keyboard-shortcuts.png"
+              alt="DroidDock Keyboard Shortcuts"
+            />
+            <div class="lb">
+              <b>Keyboard Shortcuts Help</b>
+              <p>Full keyboard navigation with a helpful reference</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Release Notes -->
+    <section id="releases">
+      <h2>Release Notes</h2>
+      <p class="lede">View what's new in each version</p>
+
+      <div class="releases">
+        <a href="releases/v0.5.0.html" class="release-item">
+          <div class="release-row">
             <div>
-                <h4 class="text-2xl font-semibold text-center mb-6 text-gray-700">Main Interface</h4>
-                <div class="grid md:grid-cols-2 gap-8">
-                    <div>
-                        <img src="screenshots/droiddock-2025-10-21-list-view-01.png" alt="DroidDock List View - Compact Layout" class="screenshot w-full">
-                        <p class="text-center mt-3 text-gray-600 font-semibold">List View - Compact Layout</p>
-                        <p class="text-center text-sm text-gray-500">Browse files in a clean, space-efficient list format</p>
-                    </div>
-                    <div>
-                        <img src="screenshots/droiddock-2025-10-21-list-view-02.png" alt="DroidDock List View - File Selection" class="screenshot w-full">
-                        <p class="text-center mt-3 text-gray-600 font-semibold">List View - File Selection</p>
-                        <p class="text-center text-sm text-gray-500">Single-click selection with visual feedback</p>
-                    </div>
-                    <div>
-                        <img src="screenshots/droiddock-2025-10-28-grid-view-01.png" alt="DroidDock Grid View - Thumbnail Gallery" class="screenshot w-full">
-                        <p class="text-center mt-3 text-gray-600 font-semibold">Grid View - Thumbnail Gallery</p>
-                        <p class="text-center text-sm text-gray-500">Visual browsing with image thumbnails</p>
-                    </div>
-                    <div>
-                        <img src="screenshots/droiddock-2025-10-28-grid-view-02.png" alt="DroidDock Grid View - File Selection" class="screenshot w-full">
-                        <p class="text-center mt-3 text-gray-600 font-semibold">Grid View - File Selection</p>
-                        <p class="text-center text-sm text-gray-500">Select files with clear visual highlighting</p>
-                    </div>
-                    <div>
-                        <img src="screenshots/droiddock-2025-10-23-search.png" alt="DroidDock Quick File Search" class="screenshot w-full">
-                        <p class="text-center mt-3 text-gray-600 font-semibold">Quick File Search</p>
-                        <p class="text-center text-sm text-gray-500">Find files instantly across all directories</p>
-                    </div>
-                    <div>
-                        <img src="screenshots/droiddock-2025-11-02-dark-mode.png" alt="DroidDock Dark Mode" class="screenshot w-full">
-                        <p class="text-center mt-3 text-gray-600 font-semibold">Dark Mode Interface</p>
-                        <p class="text-center text-sm text-gray-500">Beautiful dark theme for comfortable viewing</p>
-                    </div>
-                    <div>
-                        <img src="screenshots/droiddock-2025-11-02-keyboard-shortcuts.png" alt="DroidDock Keyboard Shortcuts" class="screenshot w-full">
-                        <p class="text-center mt-3 text-gray-600 font-semibold">Keyboard Shortcuts Help</p>
-                        <p class="text-center text-sm text-gray-500">Full keyboard navigation with helpful reference</p>
-                    </div>
-                    <div>
-                        <img src="screenshots/droiddock-2025-11-02-show-hidden.png" alt="DroidDock Show Hidden Files" class="screenshot w-full">
-                        <p class="text-center mt-3 text-gray-600 font-semibold">Show Hidden Files</p>
-                        <p class="text-center text-sm text-gray-500">Toggle visibility of hidden system files</p>
-                    </div>
-                </div>
+              <h3>v0.5.0</h3>
+              <div class="date">July 2026</div>
+              <p class="desc">
+                Recursive folder download with conflict handling, folder
+                selection in all view modes, new settings modal with
+                Light/Dark/Sync with System appearance, and dark-mode fixes
+              </p>
             </div>
-        </div>
+            <span class="arrow">→</span>
+          </div>
+        </a>
+
+        <a href="releases/v0.4.1.html" class="release-item">
+          <div class="release-row">
+            <div>
+              <h3>v0.4.1</h3>
+              <div class="date">February 2026</div>
+              <p class="desc">
+                Saved sync configurations, root breadcrumb button, internal
+                storage detection fixes for MIUI/Android 12, and Intel Mac
+                improvements
+              </p>
+            </div>
+            <span class="arrow">→</span>
+          </div>
+        </a>
+
+        <a href="releases/v0.4.0.html" class="release-item">
+          <div class="release-row">
+            <div>
+              <h3>v0.4.0</h3>
+              <div class="date">February 2026</div>
+              <p class="desc">
+                Folder sync between Mac and Android, device model name in
+                selector, new keyboard shortcuts, and UI improvements
+              </p>
+            </div>
+            <span class="arrow">→</span>
+          </div>
+        </a>
+
+        <a href="releases/v0.3.0.html" class="release-item">
+          <div class="release-row">
+            <div>
+              <h3>v0.3.0</h3>
+              <div class="date">February 13, 2026</div>
+              <p class="desc">
+                Skip duplicate downloads option plus Homebrew Cask installation
+                support and docs updates
+              </p>
+            </div>
+            <span class="arrow">→</span>
+          </div>
+        </a>
+
+        <a href="releases/v0.2.2.html" class="release-item">
+          <div class="release-row">
+            <div>
+              <h3>v0.2.2</h3>
+              <div class="date">January 17, 2026</div>
+              <p class="desc">
+                Manual dark mode toggle, improved app icon padding, fixed
+                progress display
+              </p>
+            </div>
+            <span class="arrow">→</span>
+          </div>
+        </a>
+
+        <a href="releases/v0.2.1.html" class="release-item">
+          <div class="release-row">
+            <div>
+              <h3>v0.2.1</h3>
+              <div class="date">January 1, 2026</div>
+              <p class="desc">
+                Minimalist UI redesign, clickable column sorting, simplified
+                zoom controls, new Android robot icon
+              </p>
+            </div>
+            <span class="arrow">→</span>
+          </div>
+        </a>
+
+        <a href="releases/v0.2.0.html" class="release-item">
+          <div class="release-row">
+            <div>
+              <h3>v0.2.0</h3>
+              <div class="date">January 1, 2026</div>
+              <p class="desc">
+                File preview system, keyboard navigation in preview, Kind
+                column, enhanced keyboard shortcuts
+              </p>
+            </div>
+            <span class="arrow">→</span>
+          </div>
+        </a>
+
+        <a
+          href="https://github.com/rajivm1991/DroidDock/releases"
+          class="release-item release-all"
+        >
+          View All Releases on GitHub →
+        </a>
+      </div>
     </section>
 
-    <!-- Release Notes Section -->
-    <section class="bg-gray-50 py-20 px-4">
-        <div class="max-w-4xl mx-auto">
-            <h2 class="text-4xl font-bold text-center mb-8 text-gray-800">Release Notes</h2>
-            <p class="text-center text-gray-600 mb-12 text-lg">View what's new in each version</p>
+    <!-- Download -->
+    <section id="download">
+      <h2>Download</h2>
+      <p class="lede">Get started in under five minutes</p>
 
-            <div class="space-y-4">
-                <!-- v0.4.1 -->
-                <a href="releases/v0.4.1.html" class="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="text-2xl font-bold mb-2 text-gray-700">v0.4.1</h3>
-                            <p class="text-gray-600 mb-3">February 2026</p>
-                            <p class="text-gray-700">Saved sync configurations, root breadcrumb button, internal storage detection fixes for MIUI/Android 12, and Intel Mac improvements</p>
-                        </div>
-                        <span class="text-gray-400 text-2xl">→</span>
-                    </div>
-                </a>
-
-                <!-- v0.4.0 -->
-                <a href="releases/v0.4.0.html" class="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="text-2xl font-bold mb-2 text-gray-700">v0.4.0</h3>
-                            <p class="text-gray-600 mb-3">February 2026</p>
-                            <p class="text-gray-700">Folder sync between Mac and Android, device model name in selector, new keyboard shortcuts, and UI improvements</p>
-                        </div>
-                        <span class="text-gray-400 text-2xl">→</span>
-                    </div>
-                </a>
-
-                <!-- v0.3.0 -->
-                <a href="releases/v0.3.0.html" class="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="text-2xl font-bold mb-2 text-gray-700">v0.3.0</h3>
-                            <p class="text-gray-600 mb-3">February 13, 2026</p>
-                            <p class="text-gray-700">Skip duplicate downloads option plus Homebrew Cask installation support and docs updates</p>
-                        </div>
-                        <span class="text-gray-400 text-2xl">→</span>
-                    </div>
-                </a>
-
-                <!-- v0.2.2 -->
-                <a href="releases/v0.2.2.html" class="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="text-2xl font-bold mb-2 text-gray-700">v0.2.2</h3>
-                            <p class="text-gray-600 mb-3">January 17, 2026</p>
-                            <p class="text-gray-700">Manual dark mode toggle, improved app icon padding, fixed progress display</p>
-                        </div>
-                        <span class="text-gray-400 text-2xl">→</span>
-                    </div>
-                </a>
-
-                <!-- v0.2.1 -->
-                <a href="releases/v0.2.1.html" class="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="text-2xl font-bold mb-2 text-gray-700">v0.2.1</h3>
-                            <p class="text-gray-600 mb-3">January 1, 2026</p>
-                            <p class="text-gray-700">Minimalist UI redesign, clickable column sorting, simplified zoom controls, new Android robot icon</p>
-                        </div>
-                        <span class="text-gray-400 text-2xl">→</span>
-                    </div>
-                </a>
-
-                <!-- v0.2.0 -->
-                <a href="releases/v0.2.0.html" class="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="text-2xl font-bold mb-2 text-gray-700">v0.2.0</h3>
-                            <p class="text-gray-600 mb-3">January 1, 2026</p>
-                            <p class="text-gray-700">File preview system, keyboard navigation in preview, Kind column, enhanced keyboard shortcuts</p>
-                        </div>
-                        <span class="text-gray-400 text-2xl">→</span>
-                    </div>
-                </a>
-
-                <!-- View all on GitHub -->
-                <a href="https://github.com/rajivm1991/DroidDock/releases" 
-                   class="block bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition text-center border-2 border-[#b0b0b0]">
-                    <p class="font-semibold text-[#b0b0b0]">View All Releases on GitHub →</p>
-                </a>
-            </div>
+      <div class="download-panel">
+        <a
+          id="download-dmg"
+          class="btn primary"
+          href="https://github.com/rajivm1991/DroidDock/releases/latest"
+          >📦 Download DroidDock.dmg</a
+        >
+        <p class="note">Universal Binary (Apple Silicon + Intel)</p>
+        <div class="brew-block">
+          <code
+            >brew tap rajivm1991/droiddock &amp;&amp; brew install --cask
+            droiddock</code
+          >
         </div>
+      </div>
+
+      <div class="install-steps">
+        <h4>Installation</h4>
+        <ol>
+          <li>Download the <code>DroidDock.dmg</code> file</li>
+          <li>Open the DMG and drag DroidDock to your Applications folder</li>
+          <li>Open DroidDock from Applications</li>
+          <li>
+            Install ADB and enable USB debugging on your phone — see
+            <a href="#setup">First Time Setup</a> above
+          </li>
+        </ol>
+        <div class="warn-box">
+          <strong>⚠️ Gatekeeper warning:</strong> DroidDock is currently
+          unsigned, so macOS may say the app is "damaged and can't be opened" on
+          first launch. This is normal — run
+          <code>xattr -cr /Applications/DroidDock.app</code> in Terminal once,
+          then open the app normally. Code signing will be added in future
+          releases.
+        </div>
+      </div>
+
+      <div class="req-grid">
+        <div class="req-block">
+          <h4>macOS</h4>
+          <ul>
+            <li>✅ macOS 10.15 (Catalina) or later</li>
+            <li>✅ Apple Silicon (M1/M2/M3) or Intel</li>
+            <li>✅ 50 MB free disk space</li>
+          </ul>
+        </div>
+        <div class="req-block">
+          <h4>Prerequisites</h4>
+          <ul>
+            <li>✅ ADB (Android Debug Bridge) installed</li>
+            <li>✅ USB cable for device connection</li>
+            <li>✅ Android device with USB debugging enabled</li>
+          </ul>
+        </div>
+      </div>
     </section>
 
-    <!-- Download Section -->
-    <section id="download" class="bg-white py-20 px-4">
-        <div class="max-w-4xl mx-auto">
-            <h2 class="text-4xl font-bold text-center mb-8 text-gray-800">Download</h2>
-
-             <div class="bg-white p-8 rounded-xl shadow-[0_4px_6px_rgba(0,0,0,0.05)] mb-8 border border-[#f5f5f5]">
-                 <div class="text-center">
-                     <a id="download-dmg" href="https://github.com/rajivm1991/DroidDock/releases/latest"
-                        class="inline-block text-white px-10 py-4 rounded-lg text-lg font-semibold transition shadow-lg bg-[#b0b0b0] hover:bg-[#666666]">
-                         📦 Download DroidDock.dmg
-                     </a>
-                     <p class="mt-4 text-sm text-gray-600">Universal Binary (Apple Silicon + Intel)</p>
-                     <div class="mt-6">
-                         <p class="text-lg mb-4 text-gray-700">Or install via Homebrew:</p>
-                         <div class="bg-gray-100 p-4 rounded-lg inline-block">
-                             <code class="text-gray-800 font-mono text-sm">brew tap rajivm1991/droiddock &amp;&amp; brew install --cask droiddock</code>
-                         </div>
-                     </div>
-                 </div>
-             </div>
-
-            <!-- Installation Instructions -->
-            <div class="bg-gray-50 p-8 rounded-xl mb-8">
-                <h3 class="text-2xl font-bold mb-4 text-gray-800">Installation</h3>
-                <ol class="list-decimal list-inside space-y-3 text-gray-700">
-                    <li>Download the <code class="bg-gray-200 px-2 py-1 rounded text-sm">DroidDock.dmg</code> file</li>
-                    <li>Open the DMG and drag DroidDock to your Applications folder</li>
-                    <li><strong>Important:</strong> Right-click the app and select "Open" (required for unsigned apps)</li>
-                    <li>Click "Open" in the security dialog that appears</li>
-                    <li>Connect your Android device via USB with ADB enabled</li>
-                </ol>
-                <div class="mt-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
-                    <p class="text-sm text-yellow-800">
-                        <strong>⚠️ Security Note:</strong> DroidDock is currently unsigned. macOS will show a security warning on first launch.
-                        Right-click and select "Open" to bypass this. Code signing will be added in future releases.
-                    </p>
-                </div>
-            </div>
-
-            <!-- System Requirements -->
-            <div class="bg-gray-50 p-8 rounded-xl">
-                <h3 class="text-2xl font-bold mb-4 text-gray-800">System Requirements</h3>
-                <div class="grid md:grid-cols-2 gap-6">
-                    <div>
-                        <h4 class="font-semibold mb-2 text-gray-700">macOS</h4>
-                        <ul class="space-y-2 text-gray-600">
-                            <li>✅ macOS 10.15 (Catalina) or later</li>
-                            <li>✅ Apple Silicon (M1/M2/M3) or Intel</li>
-                            <li>✅ 50 MB free disk space</li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 class="font-semibold mb-2 text-gray-700">Prerequisites</h4>
-                        <ul class="space-y-2 text-gray-600">
-                            <li>✅ ADB (Android Debug Bridge) installed</li>
-                            <li>✅ USB cable for device connection</li>
-                            <li>✅ Android device with USB debugging enabled</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="mt-6 p-4 border-l-4 rounded bg-white border-[#b0b0b0]">
-                    <p class="text-sm text-gray-600">
-                        <strong>💡 Tip:</strong> Install ADB via Homebrew: <code class="px-2 py-1 rounded bg-[#f5f5f5]">brew install android-platform-tools</code>
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-12 px-4">
-        <div class="max-w-6xl mx-auto text-center">
-            <div class="mb-6">
-                <a href="https://github.com/rajivm1991/DroidDock" class="mx-3 text-[#b0b0b0] hover:text-[#666666]">GitHub</a>
-                <a href="https://github.com/rajivm1991/DroidDock/issues" class="mx-3 text-[#b0b0b0] hover:text-[#666666]">Report Issue</a>
-                <a href="https://github.com/rajivm1991/DroidDock/releases" class="mx-3 text-[#b0b0b0] hover:text-[#666666]">Releases</a>
-            </div>
-            <p class="text-gray-400 mb-2">Built with Tauri, Rust, React, and TypeScript</p>
-            <p class="text-gray-500 text-sm">
-                © 2025-2026 DroidDock •
-                <a href="https://github.com/rajivm1991/DroidDock/blob/main/LICENSE" class="text-[#b0b0b0] hover:text-[#666666]">MIT License</a>
-            </p>
-        </div>
+    <footer>
+      <span
+        >© 2025-2026 DroidDock · MIT License · Built with Tauri, Rust &amp;
+        React</span
+      >
+      <span class="foot-links">
+        <a href="https://github.com/rajivm1991/DroidDock">GitHub</a>
+        <a href="https://github.com/rajivm1991/DroidDock/issues"
+          >Report Issue</a
+        >
+        <a href="https://github.com/rajivm1991/DroidDock/releases">Releases</a>
+      </span>
     </footer>
 
     <!-- Dynamic Download Link Script -->
     <script>
-        // Fetch latest release from GitHub API to update download button links
-        fetch('https://api.github.com/repos/rajivm1991/DroidDock/releases/latest')
-            .then(response => response.json())
-            .then(data => {
-                // Find DMG asset and update download button links
-                const dmgAsset = data.assets?.find(asset => asset.name.endsWith('.dmg'));
-                if (dmgAsset) {
-                    const downloadLinks = document.querySelectorAll('#download-dmg, #download-btn');
-                    downloadLinks.forEach(link => {
-                        link.href = dmgAsset.browser_download_url;
-                    });
-                }
-            })
-            .catch(error => {
-                console.log('Could not fetch latest release:', error);
-                // Fallback to releases page if API fails
+      fetch("https://api.github.com/repos/rajivm1991/DroidDock/releases/latest")
+        .then((response) => response.json())
+        .then((data) => {
+          const dmgAsset = data.assets?.find((asset) =>
+            asset.name.endsWith(".dmg"),
+          );
+          if (dmgAsset) {
+            const downloadLinks = document.querySelectorAll(
+              "#download-dmg, #download-btn",
+            );
+            downloadLinks.forEach((link) => {
+              link.href = dmgAsset.browser_download_url;
             });
+          }
+        })
+        .catch((error) => {
+          console.log("Could not fetch latest release:", error);
+        });
     </script>
 
-    <div style="position: fixed; top: 40px; right: 40px; z-index: 9999;">
-        <a href="https://www.buymeacoffee.com/rajivm1991" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+    <div style="position: fixed; bottom: 24px; right: 24px; z-index: 9999">
+      <a href="https://www.buymeacoffee.com/rajivm1991" target="_blank"
+        ><img
+          src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+          alt="Buy Me A Coffee"
+          style="height: 60px !important; width: 217px !important"
+      /></a>
     </div>
-</body>
+  </body>
 </html>

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-20
+
+### Added
+- **Recursive Folder Download**: Download entire folders (not just individual files), including subfolders, with per-download conflict handling — skip duplicates, replace, or keep both
+- **Folder Selection in All View Modes**: Folders can now be selected alongside files in Table, Grid, and Column view for batch operations
+- **Settings Modal with Appearance Control**: Settings moved from a dropdown to a modal dialog (Cmd+, to open), with dark mode replaced by a Light / Dark / Sync with System three-way control that follows the OS theme live
+
+### Fixed
+- **Recursive listing permission errors**: Recursive folder listing now tolerates permission-denied subdirectories instead of failing the whole operation
+- **Dark-mode toolbar styling**: Neutralized dark-mode toolbar colors to match native Finder grays
+- **Dark-mode text contrast**: Fixed a CSS nesting bug where the global dark-mode text/background fallback silently never applied, leaving black text on several elements (settings shortcuts button, sync pattern chip buttons, download options dialog)
+- **List/grid view and preview styling**: Aligned with native Finder look and feel
+
 ## [0.4.1] - 2026-02-23
 
 ### Added

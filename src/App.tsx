@@ -259,15 +259,7 @@ function FileRow({ file, fileIndex, currentPath, thumbnailsEnabled, thumbnailCac
             className="rename-input"
           />
         ) : (
-          <span
-            className={file.is_directory ? "file-name clickable" : "file-name"}
-            onClick={(e) => {
-              if (file.is_directory) {
-                e.stopPropagation();
-                onNavigate();
-              }
-            }}
-          >
+          <span className={file.is_directory ? "file-name clickable" : "file-name"}>
             {file.name}
           </span>
         )}
@@ -348,13 +340,7 @@ function GridItem({ file, fileIndex, currentPath, thumbnailsEnabled, thumbnailCa
   return (
     <div
       ref={itemRef}
-      onClick={(e) => {
-        if (file.is_directory) {
-          onNavigate();
-        } else {
-          onSelect(fileIndex, e);
-        }
-      }}
+      onClick={(e) => onSelect(fileIndex, e)}
       onDoubleClick={() => {
         if (file.is_directory) {
           onNavigate();
