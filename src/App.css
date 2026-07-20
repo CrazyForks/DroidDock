@@ -2298,11 +2298,8 @@ tbody tr {
   --text-secondary: #98989d;
   --row-hover: #252525;
   --row-alt: rgba(255, 255, 255, 0.04);
-
-  :root {
-    color: #e0e0e0;
-    background-color: #1a1a1a;
-  }
+  color: #e0e0e0;
+  background-color: #1a1a1a;
 
   .container {
     background-color: #1a1a1a;
