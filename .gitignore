@@ -28,3 +28,6 @@ dist-ssr
 
 # Claude Code workflow artifacts
 impl/
+
+# Sibling repo (own remote, not part of this project)
+/homebrew-droiddock/
